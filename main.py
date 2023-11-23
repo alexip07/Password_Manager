@@ -1,4 +1,5 @@
 import tkinter as tk
+import json
 from tkinter import messagebox
 from random import choice, randint, shuffle
 import pyperclip
@@ -6,6 +7,9 @@ import pyperclip
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 def generate_password():
+    """This will randomly generate a password using the lists below, it will have uppercase letters and symbols,
+    I think it will meet all the requirements of the websites"""
+
     letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
                'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
                'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
@@ -28,24 +32,68 @@ def generate_password():
 
 # ---------------------------- SAVE PASSWORD ------------------------------- #
 def save():
-    website = entry_website.get()
+    """This will do the saving of the account, it checks if the fields are empty or not,
+    and then it will put the data in, and after the input the fields for the website and password gets deleted,
+    for a convenient way of inputting"""
+
+    website = entry_website.get().upper()
     mail = entry_mail.get()
     password = entry_password.get()
+    new_data = {website: {
+        "email": mail,
+        "password": password,
+
+        }
+    }
 
     if len(website) == 0 or len(password) == 0:
         messagebox.showinfo(title="Oops", message="Please don`t leave any fields empty!")
     else:
-        is_ok = messagebox.askokcancel(title=website, message=f"These are the detailes entered: \nEmail: {mail} "
-                                                              f"\nPassword: {password} \nIs it ok to save?")
+        try:
+            # It reads the old data
+            with open("data.json", "r") as data_file:
+                data = json.load(data_file)
 
-        if is_ok:
-            with open("data.txt", "a") as data:
-                data.write(f"{website} | {mail} | {password}\n")
+        except FileNotFoundError:
+            # If the file doesn't exist it will be created
+            with open("data.json", "w") as data_file:
+                json.dump(new_data, data_file, indent=4)
+
+        else:
+            # Updates the old data with the new data
+            data.update(new_data)
+
+            # Saves the updated data into the file
+            with open("data.json", "w") as data_file:
+                json.dump(data, data_file, indent=4)
+
+        finally:
+            # After all of that it deletes the data from the entry points
             entry_website.delete(0, tk.END)
             entry_password.delete(0, tk.END)
 
 
+# ---------------------------- FIND PASSWORD ------------------------------- #
+def find_password():
+    """This function will try and find the data the user is searching for, based on the website.
+    If the data he is looking for isn't there a pop-up message will appear as a warning"""
+
+    website = entry_website.get().upper()
+    try:
+        with open("data.json") as data_file:
+            data = json.load(data_file)
+    except FileNotFoundError:
+        messagebox.showinfo(title="Error", message="No data file found.")
+    else:
+        if website in data:
+            email = data[website]["email"]
+            password = data[website]["password"]
+            messagebox.showinfo(title=website, message=f"Email: {email}\nPassword: {password}")
+        else:
+            messagebox.showinfo(title="Error", message=f"No details for {website} exits")
+
 # ---------------------------- UI SETUP ------------------------------- #
+
 
 window = tk.Tk()
 window.title("Password Manager")
@@ -69,8 +117,8 @@ label_password.grid(column=0, row=3)
 
 # Creating the entry points
 
-entry_website = tk.Entry(width=35)
-entry_website.grid(column=1, row=1, columnspan=2)
+entry_website = tk.Entry(width=21)
+entry_website.grid(column=1, row=1)
 entry_website.focus()
 
 entry_mail = tk.Entry(width=35)
@@ -88,5 +136,7 @@ button_generate.grid(column=2, row=3)
 button_add = tk.Button(text="Add", width=36, command=save)
 button_add.grid(column=1, row=4, columnspan=2)
 
+button_search = tk.Button(text="Search", highlightthickness=0, width=15, command=find_password)
+button_search.grid(column=2, row=1)
 
 window.mainloop()
